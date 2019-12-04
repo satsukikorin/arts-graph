@@ -1,0 +1,8 @@
+# This is negotiable, but it's common to keep and API keys, tokens, etc. in .env file, so...
+.env
+
+# JetBrains IDE files:
+*.idea
+*.iml
+
+/node_modules

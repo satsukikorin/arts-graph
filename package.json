@@ -1,0 +1,23 @@
+{
+  "name": "arts-graph",
+  "version": "0.1.0",
+  "description": "GraphQL server for data about artists, their associations, their works, genres, etc.",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "apollo-server": "^2.9.7",
+    "dotenv": "^8.2.0",
+    "graphql": "^14.5.8",
+    "graphql-iso-date": "^3.6.1",
+    "graphql-tools": "latest",
+    "isemail": "^3.2.0",
+    "merge-graphql-schemas": "^1.7.3",
+    "mongodb": "^3.3.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Colin May",
+  "license": "ISC"
+}
