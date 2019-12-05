@@ -12,12 +12,12 @@ export default gql`
       id: ID!
     ): Node
     
-    getPerson(
+    Person(
       fullBirthName: String!
       birthdate: Date
     ): [Person]
 
-    getArtist(
+    Artist(
       name: String!
     ): [Artist]
     

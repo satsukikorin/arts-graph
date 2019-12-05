@@ -7,16 +7,21 @@ const dbURL = 'mongodb://localhost:27017/artsdb';
 
 const run = async (db) => {
 
-  // The ApolloServer constructor requires two parameters: your schema
-  // definition and your set of resolvers.
-  const server = new Apollo.ApolloServer({ typeDefs, resolvers });
+  const context = {
+    ...db.collections
+  };
+
+  const server = new Apollo.ApolloServer({
+    typeDefs,
+    resolvers,
+    context,
+    tracing: true
+  });
 
   // The `listen` method launches a web server.
   server.listen().then(({ url }) => {
     console.log(`🚀  Server ready at ${url}`);
   });
-
-  console.log("••• finished startup");
 };
 
 Promise.resolve({dbURL, mongoOpts: { useUnifiedTopology: true }})

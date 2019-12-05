@@ -1,33 +1,39 @@
 const artistPersonaSearch = (args) => {
     return {
       personas: {
-        $elemMatch: {type: "Artist", ...args}
+        $elemMatch: {personaType: "Artist", ...args}
       }
     };
 };
 
 export default {
   Query: {
-    getPerson: async (root, args, { Person }) => {
-      return await Person.find(args)
+    Person: async (root, args, { Person }) => {
+      const result = await Person.find(args);
+      return (await result.toArray()).map(person => {
+        person.id = person._id.toString();
+        return person;
+      });
     },
 
-    getArtist: async (root, {name}, { Person }) => {
+    Artist: async (root, {name}, { Person }) => {
       // Look for any Person with an Artist persona with matching name.
       const search = artistPersonaSearch({name});
 
-      const candidates = await Person.find(search); // Does this really always result in an array?
+      const candidates = await Person.find(search).toArray(); // Does this really always result in an array?
 
       if (candidates.length) {
         // We're only going to return the Artist persona...
         const artists = candidates.map(candidate => candidate.personas.find(p => p.name === name));
-        // ...but first we need to back-refer to the persona-owning Person.
+        // ...but first we need to back-refer to the persona-owning Person. Or should this only be done if the
+        // request query asked for uniquePerson data?
         artists.forEach((artist, i) => {
-          artist.uniquePerson = candidates[i];
+          const person = candidates[i];
+          person.id = person._id.toString();
+          artist.uniquePerson = person;
         });
         return artists;
       }
-      // If no matches were found, is it OK not to return, i.e. return undefined?
     },
 
     getArtistGroup: async (root, {name}, { ArtistGroup }) => {
