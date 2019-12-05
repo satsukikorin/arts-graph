@@ -1,5 +1,7 @@
 //import {GraphQLDate} from "graphql-iso-date";
-import { gql } from 'apollo-server';
+import ApolloServer from 'apollo-server';
+
+const { gql } = ApolloServer;
 
 export default gql`
   
@@ -9,14 +11,32 @@ export default gql`
     node(
       id: ID!
     ): Node
+    
+    getPerson(
+      fullBirthName: String!
+      birthdate: Date
+    ): [Person]
 
-    artists(
-      # The number of results to show. Must be >= 1. Default = 20
-      pageSize: Int
-
-      # If you add a cursor here, it will only return results _after_ this cursor
-      after: String
-    ): ArtistsConnection!
+    getArtist(
+      name: String!
+    ): [Artist]
+    
+    getArtistGroup(
+      name: String!
+    ): [ArtistGroup]
+    
+    getTrack(
+      name: String
+      creators: [String]
+    ): [Track]
+    
+#    artists(
+#      # The number of results to show. Must be >= 1. Default = 20
+#      pageSize: Int
+#
+#      # If you add a cursor here, it will only return results _after_ this cursor
+#      after: String
+#    ): ArtistsConnection!
   }
 
   """
@@ -229,10 +249,8 @@ export default gql`
     
     id: ID!
   }
-
-
   type Mutation {
-    # TO DO
+    _dummy: Boolean
   }
 `;
 
