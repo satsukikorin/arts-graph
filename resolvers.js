@@ -1,70 +1,122 @@
-const artistPersonaSearch = (args) => {
-    return {
-      personas: {
-        $elemMatch: {personaType: "Artist", ...args}
-      }
-    };
+import mongodb from 'mongodb';
+const { ObjectId } = mongodb;
+
+const strungId = (node) => {
+  node.id = node._id.toString();
+  return node;
 };
 
-export default {
+const getUniquePerson = async (persona, Person) => {
+  const p = await Person.findOne({_id: persona.uniquePerson.href});
+  return strungId(p);
+};
+
+const ResolverThang = {
   Query: {
     Person: async (root, args, { Person }) => {
-      const result = await Person.find(args);
-      return (await result.toArray()).map(person => {
-        person.id = person._id.toString();
-        return person;
-      });
+      const result = await Person.find(args).toArray();
+      return strungId(result);
     },
 
-    Artist: async (root, {name}, { Person }) => {
-      // Look for any Person with an Artist persona with matching name.
-      const search = artistPersonaSearch({name});
-
-      const candidates = await Person.find(search).toArray(); // Does this really always result in an array?
-
-      if (candidates.length) {
-        // We're only going to return the Artist persona...
-        const artists = candidates.map(candidate => candidate.personas.find(p => p.name === name));
-        // ...but first we need to back-refer to the persona-owning Person. Or should this only be done if the
-        // request query asked for uniquePerson data?
-        artists.forEach((artist, i) => {
-          const person = candidates[i];
-          person.id = person._id.toString();
-          artist.uniquePerson = person;
+    /*
+        id may be for a Person node or a Persona node. In the latter case it means looking up the Persona's uniquePerson
+        before getting all Personas (optionally filtering for the given type).
+     */
+    aliases: async (root, {id, type}, { Artist, Person }, info) => {
+      const _id = ObjectId(id);
+      let person = await Person.findOne({_id});
+      if (!person) {
+        // preferably delegate to Artist query with uniquePerson filled out, and that Person's fulfilled personas
+        const persona = await ResolverThang.Person.personas({ //Passing in an ad-hoc person object
+          personas: [
+            {href: _id}
+          ]
         });
-        return artists;
+        person = persona.uniquePerson = await getUniquePerson(persona, Person);
       }
+      return Promise.all(
+        person.personas.map(p => Artist.find({_id: p.href}).toArray() )
+      );
     },
 
-    getArtistGroup: async (root, {name}, { ArtistGroup }) => {
-      return await ArtistGroup.find({name});
+    Artist: async (root, {name, realName}, { Artist, Person }, info) => {
+
+      const candidates = await Artist.find({name}).toArray();
+      /*
+      * Insert Wikipedia-like disambiguation logic here. We want to return the most popular
+      * artist result first, which means we'd need have/track that popularity metadata
+      * in the first place (which we don't...yet).
+      */
+
+      const artists = realName ? candidates.filter(c => c.uniquePerson.name === realName) : candidates;
+
+      const result = artists.map(strungId);
+      return Promise.all(result);
     },
 
-    getTrack: async (root, args, { Track }) => {
+    ArtistGroup: async (root, { name }, { ArtistGroup }, info) => {
+      return (await ArtistGroup.find({name})).toArray();
+    },
+
+    Track: async (root, args, { Track }) => {
       // If more than creators' names were requested, details will need to be filled out from Artist.
       return await Track.find(args);
     }
   },
 
+  // --------- SUBFIELD & TYPE RESOLVERS ---------- //
+
   Person: {
 
+    // How can we make this respond to queries for only specific persona types?
+    personas: async (person, a, b, c) => {
+      const result = await Promise.all(
+        person.personas.map(async (p) => {
+          const source = context[p.type];
+          if (!source) {
+            console.error(`Don't know how to search for '${type}' persona on Person ${p._id.toString()}`);
+          } else {
+            const persona = await source.findOne({_id: p.href});
+            if (persona) {
+              persona.__type = persona.type = p.type;
+            }
+            return persona
+          }
+        })
+      );
+      return result;
+    }
+  },
+
+  Persona: {
+    __resolveType (obj, a, b, c) {
+      return obj.type || obj[0].type;
+    }
   },
 
   Artist: {
+    __resolveType: () => {
+      return 'Artist';
+    },
 
+    uniquePerson: async (artist, args, {Person}, info) => {
+      return getUniquePerson(artist, Person);
+    }
   },
 
   ArtistGroup: {
-/*
-    node.members = node.members.map(async member => {
-      member.is = await fetch(member.href);
-      // delete member.href?
+    __resolveType (obj, a, b, c) {
+      return 'ArtistGroup';
+    },
+    members: async (obj, args, {Artist}, info) => {
+      // do stuff
     }
-*/
   },
 
   ArtistOrGroup: {
-
+    __resolveType (obj, a, b, c) {
+      return obj.type;
+    }
   },
 
   Contact: {
@@ -92,13 +144,4 @@ export default {
   }
 };
 
-  // const peeps = await db.collection('Person');
-  //
-  // let colin = await peeps.findOne({fullBirthName: "Colin Eugene May"});
-  //
-  // console.log(`Colin was ${colin && colin.length ? '' : 'not'} found`);
-  //
-  // if (colin && colin.personas) {
-  //   console.log(colin.personas.map(p => p.name).toString());
-  // }
-
+export default ResolverThang;

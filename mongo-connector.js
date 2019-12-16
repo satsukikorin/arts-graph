@@ -8,6 +8,7 @@ export default async function (opts) {
   const db = await client.db('artsdb');
   const collections = [
     'Person',
+    'Artist',
     'ArtistGroup',
     'Track',
     'Album',
@@ -21,7 +22,7 @@ export default async function (opts) {
     map[collectionName] = connections[i];
     return map;
   }, {});
-  /* This should get us
+  /* The above should get us a registry of services:
     {
       Album: <Album collection API>,
       ArtistGroup: <ArtistGroup collection API>,

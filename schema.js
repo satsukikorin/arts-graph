@@ -21,11 +21,16 @@ export default gql`
       name: String!
     ): [Artist]
     
-    getArtistGroup(
+    aliases(
+      id: ID!
+      type: String
+    ): [Persona]
+    
+    ArtistGroup(
       name: String!
     ): [ArtistGroup]
     
-    getTrack(
+    Track(
       name: String
       creators: [String]
     ): [Track]
